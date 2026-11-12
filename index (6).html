@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Society Hub – Registrations and Meetings</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--tx:#161b26;--mu:#5c6577;--bd:#d9deea;--ac:#1d4ed8;--acx:#fff;--bad:#c0392b;--ok:#1c7a4a;--st:#b45f06}
+@media(prefers-color-scheme:dark){:root{--bg:#0f131b;--card:#181d28;--tx:#e8ebf3;--mu:#98a2b8;--bd:#2a3142;--ac:#7aa2ff;--acx:#0a1530;--bad:#ff8a7a;--ok:#6fd3a0;--st:#f0b35a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+header,main{max-width:1000px;margin:0 auto;padding:14px 20px}
+h1{font:700 1.8rem/1.2 Georgia,serif;margin:0}
+h2{font:600 1.05rem Georgia,serif;margin:0 0 6px}
+.sub,small{color:var(--mu)}
+.sub{margin:2px 0 0}
+small{font-size:12px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:12px}
+.warn{border-color:var(--st)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button,select,input,textarea{font:inherit;color:var(--tx)}
+button{padding:6px 12px;border-radius:6px;border:1px solid var(--bd);background:var(--card);cursor:pointer}
+button.p,button[aria-pressed=true]{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+select,input,textarea{padding:6px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);width:100%}
+textarea{min-height:60px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.soc{background:var(--card);border:1px solid var(--bd);border-left:6px solid var(--mu);border-radius:8px;padding:12px}
+.soc.open{border-left-color:var(--ok)}.soc.soon{border-left-color:var(--st)}
+.soc h2{display:flex;justify-content:space-between;gap:8px}
+.badge{font-size:12px;font-weight:700;padding:1px 10px;border-radius:99px;border:1px solid var(--mu);color:var(--mu);white-space:nowrap}
+.badge.open{color:var(--ok);border-color:var(--ok)}.badge.soon{color:var(--st);border-color:var(--st)}
+.line{display:flex;gap:8px;font-size:14px;margin:4px 0}
+.line b{min-width:70px;color:var(--mu);font-weight:600}
+.note{background:color-mix(in srgb,var(--st) 14%,var(--card));border-radius:6px;padding:4px 8px;font-size:13px;margin:6px 0}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.acts button{padding:3px 10px;font-size:13px}
+.star.on{color:var(--st);border-color:var(--st)}
+.fg{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+label{display:block;font-weight:600;font-size:13px}
+.day{margin:14px 0 4px;font:600 .95rem Georgia,serif}
+.ev{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:14px}
+.ev time{min-width:70px;color:var(--mu)}
+.k{font-size:11px;padding:0 8px;border-radius:99px;border:1px solid var(--bd);align-self:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>Society Hub</h1>
+  <p class="sub">When registrations open, and where each society meets. Follow your societies to get one timeline and a calendar file.</p>
+</header>
+<main>
+  <div id="ph"></div>
+  <div class="bar" id="tabs"></div>
+  <div id="view"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const plus=n=>{const d=new Date();d.setDate(d.getDate()+n);return ymd(d)};
+const dt=s=>new Date(s+"T00:00:00");
+const DN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],BY=["SU","MO","TU","WE","TH","FR","SA"];
+const fD=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+const fT=t=>t?new Date("2000-01-01T"+t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"";
+const midnight=()=>dt(ymd(new Date()));
+const inDays=d=>Math.round((d-midnight())/864e5);
+const rel=n=>n===0?"today":n===1?"tomorrow":"in "+n+" days";
+
+const SAMPLE=()=>({ph:true,tab:"list",f:"all",q:"",edit:"",soc:[
+ {id:"s1",name:"OWASP Student Chapter",cat:"Cybersecurity",about:"Web security workshops, CTF practice and secure coding sessions.",rs:plus(5),re:plus(19),link:"",day:"Fri",time:"17:00",venue:"Venue to be confirmed",od:"",otm:"",ov:"",notice:"",contact:"",my:true},
+ {id:"s2",name:"Coding Society",cat:"Technical",about:"Weekly contests and peer learning for competitive programming.",rs:plus(-3),re:plus(4),link:"",day:"Wed",time:"18:00",venue:"Lab 2",od:"",otm:"",ov:"",notice:"",contact:"",my:false},
+ {id:"s3",name:"Robotics Society",cat:"Technical",about:"Build and compete with autonomous robots.",rs:plus(-25),re:plus(-10),link:"",day:"Sat",time:"11:00",venue:"Workshop Block",od:"",otm:"",ov:"",notice:"",contact:"",my:false},
+ {id:"s4",name:"Photography Club",cat:"Creative",about:"Photo walks, editing workshops and exhibitions.",rs:plus(12),re:plus(26),link:"",day:"Sun",time:"09:00",venue:"Main lawn",od:"",otm:"",ov:"",notice:"",contact:"",my:false},
+ {id:"s5",name:"Debating Society",cat:"Cultural",about:"Parliamentary debates and public speaking practice.",rs:"",re:"",link:"",day:"Thu",time:"17:30",venue:"Seminar room",od:"",otm:"",ov:"",notice:"",contact:"",my:false},
+ {id:"s6",name:"Music Society",cat:"Cultural",about:"Jam sessions and performances for fests.",rs:plus(-1),re:plus(20),link:"",day:"Tue",time:"18:30",venue:"Music room",od:plus(3),otm:"16:00",ov:"Open air stage",notice:"This week's meet moved to the open air stage.",contact:"",my:false}]});
+let S=SAMPLE();
+try{const x=JSON.parse(localStorage.getItem("soc-v1"));if(x&&x.soc)S=x}catch(e){}
+const save=()=>{try{localStorage.setItem("soc-v1",JSON.stringify(S))}catch(e){}};
+
+function reg(s){
+  if(!s.rs)return{k:"na",t:"Dates not announced",sub:"Check back soon"};
+  const t=midnight(),a=dt(s.rs),b=s.re?dt(s.re):null;
+  if(t<a){const n=inDays(a);return{k:"soon",t:"Opens "+rel(n),sub:fD(a)+(b?" to "+fD(b):"")}}
+  if(!b||t<=b){const n=b?inDays(b):null;return{k:"open",t:"Open now",sub:b?`Closes ${rel(n)} (${fD(b)})`:"No closing date"}}
+  return{k:"closed",t:"Closed",sub:"Ended "+fD(b)};
+}
+function nextMeet(s){
+  const now=new Date(),out=[];
+  if(s.od&&dt(s.od)>=midnight())out.push({d:dt(s.od),time:s.otm||s.time,venue:s.ov||s.venue,special:true});
+  const wi=DN.indexOf(s.day);
+  if(wi>=0&&s.time)for(let i=0;i<8;i++){
+    const d=midnight();d.setDate(d.getDate()+i);
+    if(d.getDay()!==wi)continue;
+    const [h,m]=s.time.split(":");d.setHours(+h,+m);
+    if(d>now){const e=new Date(d);e.setHours(0,0,0,0);out.push({d:e,time:s.time,venue:s.venue});break}
+  }
+  out.sort((a,b)=>a.d-b.d||a.time.localeCompare(b.time));
+  return out[0]||null;
+}
+
+function card(s){
+  const r=reg(s),n=nextMeet(s);
+  return `<div class="soc ${r.k}"><h2><span>${esc(s.name)}</span><span class="badge ${r.k}">${r.t}</span></h2><small>${esc(s.cat)}</small>
+  <p style="margin:6px 0">${esc(s.about)}</p>
+  <div class="line"><b>Registration</b><span>${r.sub}</span></div>
+  <div class="line"><b>Meets</b><span>${s.day&&s.time?`Every ${s.day}, ${fT(s.time)} at ${esc(s.venue||"venue not added")}`:"Meeting time not added"}</span></div>
+  ${n?`<div class="line"><b>Next meet</b><span><b style="color:var(--tx)">${fD(n.d)}, ${fT(n.time)}</b> (${rel(inDays(n.d))}) at ${esc(n.venue||"venue not added")}${n.special?" · special meet":""}</span></div>`:""}
+  ${s.notice?`<div class="note">${esc(s.notice)}</div>`:""}
+  <div class="acts">${r.k==="open"?(s.link?`<a href="${esc(s.link)}" target="_blank" rel="noopener"><button class="p">Register</button></a>`:'<button disabled title="No link added yet">Register link not added</button>'):""}
+  <button class="star ${s.my?"on":""}" data-follow="${s.id}" aria-pressed="${!!s.my}">${s.my?"★ Following":"☆ Follow"}</button><button data-ics="${s.id}">Add to calendar</button><button data-edit="${s.id}">Edit</button></div>
+  ${s.contact?`<small>Contact: ${esc(s.contact)}</small>`:""}</div>`;
+}
+
+function viewList(){
+  const q=S.q.toLowerCase();
+  const list=S.soc.filter(s=>(!q||(s.name+" "+s.cat).toLowerCase().includes(q))&&(S.f==="all"||(S.f==="my"?s.my:reg(s).k===S.f)))
+    .sort((a,b)=>(b.my?1:0)-(a.my?1:0)||a.name.localeCompare(b.name));
+  const F=[["all","All"],["open","Open now"],["soon","Opening soon"],["my","Following"]];
+  return `<div class="bar">${F.map(f=>`<button data-f="${f[0]}" aria-pressed="${S.f===f[0]}">${f[1]}</button>`).join("")}<input id="q" placeholder="Search societies" value="${esc(S.q)}" style="max-width:220px" aria-label="Search societies"></div>
+  <div class="grid">${list.map(card).join("")||'<p class="sub">No societies match.</p>'}</div>`;
+}
+
+function events(days){
+  const ev=[],end=midnight();end.setDate(end.getDate()+days);
+  S.soc.filter(s=>s.my).forEach(s=>{
+    [["rs","Registration opens"],["re","Registration closes"]].forEach(([k,l])=>{if(s[k]){const d=dt(s[k]);if(d>=midnight()&&d<=end)ev.push({d,time:"",t:`${s.name}: ${l.toLowerCase()}`,w:"",k:"reg"})}});
+    if(s.od&&dt(s.od)>=midnight()&&dt(s.od)<=end)ev.push({d:dt(s.od),time:s.otm||s.time,t:s.name+" meet (special)",w:s.ov||s.venue,k:"meet"});
+    const wi=DN.indexOf(s.day);
+    if(wi>=0&&s.time)for(let i=0;i<=days;i++){const d=midnight();d.setDate(d.getDate()+i);if(d.getDay()===wi&&!(s.od&&ymd(d)===s.od))ev.push({d,time:s.time,t:s.name+" meet",w:s.venue,k:"meet"})}
+  });
+  return ev.sort((a,b)=>a.d-b.d||a.time.localeCompare(b.time));
+}
+function viewTimeline(){
+  if(!S.soc.some(s=>s.my))return '<div class="box"><p>You are not following any society yet. Open the Societies tab and press Follow on the ones you care about.</p></div>';
+  const ev=events(30);let h='<div class="bar"><button class="p" data-ics="all">Add all to calendar (.ics)</button><small>Next 30 days for the societies you follow</small></div>',last="";
+  ev.forEach(e=>{const key=ymd(e.d);if(key!==last){h+=`<div class="day">${fD(e.d)} <small>(${rel(inDays(e.d))})</small></div>`;last=key}
+    h+=`<div class="ev"><time>${fT(e.time)||"All day"}</time><span style="flex:1">${esc(e.t)}${e.w?` <small>at ${esc(e.w)}</small>`:""}</span><span class="k">${e.k==="reg"?"registration":"meeting"}</span></div>`});
+  return h||'<p class="sub">Nothing coming up.</p>';
+}
+
+const F=(id,l,v,t="text")=>`<label>${l}<input id="${id}" type="${t}" value="${esc(v)}"></label>`;
+function viewEdit(){
+  const s=S.soc.find(x=>x.id===S.edit)||{name:"",cat:"",about:"",rs:"",re:"",link:"",day:"Fri",time:"17:00",venue:"",od:"",otm:"",ov:"",notice:"",contact:""};
+  return `<div class="box"><div class="bar"><label style="width:260px">Society<select id="pick"><option value="">New society</option>${S.soc.map(x=>`<option value="${x.id}"${x.id===S.edit?" selected":""}>${esc(x.name)}</option>`).join("")}</select></label></div>
+  <div class="fg">${F("e_name","Name",s.name)}${F("e_cat","Category",s.cat)}${F("e_rs","Registration opens",s.rs,"date")}${F("e_re","Registration closes",s.re,"date")}${F("e_link","Registration link",s.link)}${F("e_contact","Contact",s.contact)}
+  <label>Regular meet day<select id="e_day">${DN.map(d=>`<option${d===s.day?" selected":""}>${d}</option>`).join("")}</select></label>${F("e_time","Meet time",s.time,"time")}${F("e_venue","Venue (room, block, landmark)",s.venue)}</div>
+  <h2 style="margin-top:14px">One-off change (optional)</h2><div class="fg">${F("e_od","Special meet date",s.od,"date")}${F("e_otm","Time",s.otm,"time")}${F("e_ov","Venue",s.ov)}</div>
+  <label style="margin-top:10px">About<textarea id="e_about">${esc(s.about)}</textarea></label><label style="margin-top:10px">Notice (shown on the card)<input id="e_notice" value="${esc(s.notice)}"></label>
+  <div class="bar" style="margin-top:12px"><button class="p" data-act="save">Save</button>${s.id?'<button data-act="del">Delete</button>':""}<button data-act="reset">Reset to sample</button></div></div>`;
+}
+
+function render(){
+  $("ph").innerHTML=S.ph?'<div class="box warn"><b>Sample data.</b> Registration dates, venues and times here are placeholders, not real society details. Use <b>Edit</b> to enter the real ones for OWASP and any other society, then they replace the sample.</div>':"";
+  $("tabs").innerHTML=[["list","Societies"],["time","My timeline"],["edit","Add or edit"]].map(t=>`<button data-tab="${t[0]}" aria-pressed="${S.tab===t[0]}">${t[1]}</button>`).join("");
+  $("view").innerHTML=S.tab==="list"?viewList():S.tab==="time"?viewTimeline():viewEdit();
+  const q=$("q");if(q&&document.activeElement===document.body&&S.q){/* keep focus handled in input */}
+}
+
+function ics(list){
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//SocietyHub//EN"],f=s=>s.replace(/-/g,""),clean=s=>String(s||"").replace(/[,;\n]/g," ");
+  const dtm=(d,t)=>f(d)+"T"+t.replace(":","")+"00";
+  const add=(...x)=>L.push("BEGIN:VEVENT",...x,"END:VEVENT");
+  list.forEach(s=>{
+    [["rs","registrations open"],["re","registrations close"]].forEach(([k,l])=>{if(s[k])add(`UID:${s.id}-${k}@soc`,`DTSTAMP:${f(ymd(new Date()))}T000000Z`,`DTSTART;VALUE=DATE:${f(s[k])}`,`SUMMARY:${clean(s.name)} ${l}`)});
+    const wi=DN.indexOf(s.day);
+    if(wi>=0&&s.time){let d=midnight();while(d.getDay()!==wi)d.setDate(d.getDate()+1);const dd=ymd(d),[h,m]=s.time.split(":"),eh=String((+h+1)%24).padStart(2,"0");
+      add(`UID:${s.id}-meet@soc`,`DTSTAMP:${f(ymd(new Date()))}T000000Z`,`DTSTART:${dtm(dd,s.time)}`,`DTEND:${dtm(dd,eh+":"+m)}`,`RRULE:FREQ=WEEKLY;BYDAY=${BY[wi]}`,`SUMMARY:${clean(s.name)} meet`,`LOCATION:${clean(s.venue)}`)}
+    if(s.od&&dt(s.od)>=midnight()){const t=s.otm||s.time||"17:00",[h,m]=t.split(":");add(`UID:${s.id}-one@soc`,`DTSTAMP:${f(ymd(new Date()))}T000000Z`,`DTSTART:${dtm(s.od,t)}`,`DTEND:${dtm(s.od,String((+h+1)%24).padStart(2,"0")+":"+m)}`,`SUMMARY:${clean(s.name)} special meet`,`LOCATION:${clean(s.ov||s.venue)}`)}
+  });
+  L.push("END:VCALENDAR");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([L.join("\r\n")],{type:"text/calendar"}));a.download="societies.ics";a.click();
+}
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b||b.disabled)return;
+  const d=b.dataset;
+  if(d.tab){S.tab=d.tab;render()}
+  else if(d.f){S.f=d.f;render()}
+  else if(d.follow){const s=S.soc.find(x=>x.id===d.follow);s.my=!s.my;save();render()}
+  else if(d.ics){ics(d.ics==="all"?S.soc.filter(s=>s.my):S.soc.filter(s=>s.id===d.ics))}
+  else if(d.edit){S.edit=d.edit;S.tab="edit";render()}
+  else if(d.act==="save"){
+    const v=id=>$(id).value.trim();
+    if(!v("e_name")){$("e_name").focus();return}
+    let s=S.soc.find(x=>x.id===S.edit);
+    if(!s){s={id:"x"+Date.now(),my:true};S.soc.push(s)}
+    Object.assign(s,{name:v("e_name"),cat:v("e_cat"),about:v("e_about"),rs:v("e_rs"),re:v("e_re"),link:v("e_link"),contact:v("e_contact"),day:$("e_day").value,time:v("e_time"),venue:v("e_venue"),od:v("e_od"),otm:v("e_otm"),ov:v("e_ov"),notice:v("e_notice")});
+    S.ph=false;S.edit="";S.tab="list";save();render();
+  }
+  else if(d.act==="del"){if(confirm("Delete this society?")){S.soc=S.soc.filter(x=>x.id!==S.edit);S.edit="";S.tab="list";save();render()}}
+  else if(d.act==="reset"){if(confirm("Replace everything with the sample data?")){S=SAMPLE();save();render()}}
+});
+document.addEventListener("change",e=>{if(e.target.id==="pick"){S.edit=e.target.value;render()}});
+document.addEventListener("input",e=>{
+  if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=$("q");q.focus();q.setSelectionRange(pos,pos)}
+});
+render();
+</script>
+</body>
+</html>
